@@ -30,18 +30,9 @@ module Audited
       #     class User < ActiveRecord::Base
       #       audited :except => :password
       #     end
-      # * +protect+ - If your model uses +attr_protected+, set this to false to prevent Rails from
-      #   raising an error.  If you declare +attr_accessible+ before calling +audited+, it
-      #   will automatically default to false.  You only need to explicitly set this if you are
-      #   calling +attr_accessible+ after.
       #
       # * +require_comment+ - Ensures that audit_comment is supplied before
       #   any create, update or destroy operation.
-      #
-      #     class User < ActiveRecord::Base
-      #       audited :protect => false
-      #       attr_accessible :name
-      #     end
       #
       # * +if+ - Only audit the model when the given function returns true
       # * +unless+ - Only audit the model when the given function returns false
@@ -79,9 +70,6 @@ module Audited
         end
 
         attr_accessor :audit_comment
-        unless options[:allow_mass_assignment]
-          attr_accessible :audit_comment
-        end
 
         has_many :audits, :as => :auditable, :class_name => Audited.audit_class.name
         Audited.audit_class.audited_class_names << self.to_s
@@ -90,10 +78,12 @@ module Audited
         before_update :audit_update if !options[:on] || (options[:on] && options[:on].include?(:update))
         before_destroy :audit_destroy if !options[:on] || (options[:on] && options[:on].include?(:destroy))
 
-        # Define and set an after_audit callback. This might be useful if you want
-        # to notify a party after the audit has been created.
+        # Define and set after_audit and around_audit callbacks. This might be useful if you want
+        # to notify a party after the audit has been created or if you want to access the newly-created
+        # audit.
         define_callbacks :audit
         set_callback :audit, :after, :after_audit, :if => lambda { self.respond_to?(:after_audit) }
+        set_callback :audit, :around, :around_audit, :if => lambda { self.respond_to?(:around_audit) }
 
         attr_accessor :version
 
@@ -236,7 +226,7 @@ module Audited
 
       def audit_destroy
         write_audit(:action => 'destroy', :audited_changes => audited_attributes,
-                    :comment => audit_comment)
+                    :comment => audit_comment) unless self.new_record?
       end
 
       def write_audit(attrs)
