@@ -28,7 +28,7 @@ Gem::Specification.new do |gem|
 
   # JRuby support for the test ENV
   unless defined?(JRUBY_VERSION)
-    gem.add_development_dependency 'sqlite3', '~> 1.2'
+    gem.add_development_dependency 'sqlite3', '~> 1.3'
     gem.add_development_dependency 'mysql2', '~> 0.3'
     gem.add_development_dependency 'pg', '~> 0.17'
     gem.add_development_dependency 'bson_ext', '~> 1.6'
